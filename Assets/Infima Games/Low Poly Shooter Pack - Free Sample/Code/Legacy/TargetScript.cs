@@ -1,69 +1,120 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using System.Collections;
+using Random = UnityEngine.Random;
 
-public class TargetScript : MonoBehaviour {
+public class TargetScript : MonoBehaviour
+{
+    float randomTime;
+    bool routineStarted = false;
 
-	float randomTime;
-	bool routineStarted = false;
+    //Used to check if the target has been hit
+    public bool isHit = false;
 
-	//Used to check if the target has been hit
-	public bool isHit = false;
+    [Header("Customizable Options")]
+    //Decides if the target is stationary or moving
+    public bool isStationary = true;
 
-	[Header("Customizable Options")]
-	//Minimum time before the target goes back up
-	public float minTime;
-	//Maximum time before the target goes back up
-	public float maxTime;
+    //Minimum time before the target goes back up
+    public float minTime;
 
-	[Header("Audio")]
-	public AudioClip upSound;
-	public AudioClip downSound;
+    //Maximum time before the target goes back up
+    public float maxTime;
 
-	[Header("Animations")]
-	public AnimationClip targetUp;
-	public AnimationClip targetDown;
+    [Header("Audio")] public AudioClip upSound;
+    public AudioClip downSound;
 
-	public AudioSource audioSource;
-	
-	private void Update () {
-		
-		//Generate random time based on min and max time values
-		randomTime = Random.Range (minTime, maxTime);
+    [Header("Animations")] public AnimationClip targetUp;
+    public AnimationClip targetDown;
 
-		//If the target is hit
-		if (isHit == true) 
-		{
-			if (routineStarted == false) 
-			{
-				//Animate the target "down"
-				gameObject.GetComponent<Animation>().clip = targetDown;
-				gameObject.GetComponent<Animation>().Play();
+    public AudioSource audioSource;
 
-				//Set the downSound as current sound, and play it
-				audioSource.GetComponent<AudioSource>().clip = downSound;
-				audioSource.Play();
+    // collider for sides of the object to decide, where (not) to move.
+    [SerializeField] private BoxCollider leftSide;
+    [SerializeField] private BoxCollider rightSide;
 
-				//Start the timer
-				StartCoroutine(DelayTimer());
-				routineStarted = true;
-			} 
-		}
-	}
+    // speed of target movement
+    [SerializeField] private float speed;
 
-	//Time before the target pops back up
-	private IEnumerator DelayTimer () {
-		//Wait for random amount of time
-		yield return new WaitForSeconds(randomTime);
-		//Animate the target "up" 
-		gameObject.GetComponent<Animation>().clip = targetUp;
-		gameObject.GetComponent<Animation>().Play();
+    private float timeToDecideDirection;
+    private bool isMovingRight;
+    private Transform _transform;
+    private System.Random randomGenerator = new System.Random();
 
-		//Set the upSound as current sound, and play it
-		audioSource.GetComponent<AudioSource>().clip = upSound;
-		audioSource.Play();
 
-		//Target is no longer hit
-		isHit = false;
-		routineStarted = false;
-	}
+    private void Awake()
+    {
+        _transform = GetComponent<Transform>();
+    }
+
+    private void Update()
+    {
+        //Generate random time based on min and max time values
+        randomTime = Random.Range(minTime, maxTime);
+
+        //If the target is hit
+        if (isHit == true)
+        {
+            if (routineStarted == false)
+            {
+                //Animate the target "down"
+                gameObject.GetComponent<Animation>().clip = targetDown;
+                gameObject.GetComponent<Animation>().Play();
+
+                //Set the downSound as current sound, and play it
+                audioSource.GetComponent<AudioSource>().clip = downSound;
+                audioSource.Play();
+
+                //Start the timer
+                StartCoroutine(DelayTimer());
+                routineStarted = true;
+            }
+        }
+
+        // Every 1 to 3 seconds decide randomly direction to move to
+        if (timeToDecideDirection <= 0)
+        {
+            isMovingRight = randomGenerator.Next(0, 2) == 0;
+            timeToDecideDirection = 1 + (float) randomGenerator.NextDouble() * 2;
+        }
+
+        timeToDecideDirection -= Time.deltaTime;
+    }
+
+    private void FixedUpdate()
+    {
+        if (isStationary || isHit)
+        {
+            return;
+        }
+
+        _transform.Translate(isMovingRight
+            ? Vector3.right * Time.deltaTime * speed
+            : Vector3.left * Time.deltaTime * speed);
+    }
+
+    //Time before the target pops back up
+    private IEnumerator DelayTimer()
+    {
+        //Wait for random amount of time
+        yield return new WaitForSeconds(randomTime);
+        //Animate the target "up" 
+        gameObject.GetComponent<Animation>().clip = targetUp;
+        gameObject.GetComponent<Animation>().Play();
+
+        //Set the upSound as current sound, and play it
+        audioSource.GetComponent<AudioSource>().clip = upSound;
+        audioSource.Play();
+
+        //Target is no longer hit
+        isHit = false;
+        routineStarted = false;
+    }
+
+
+    // Move to the opposite direction of collision
+    public void HitSide(bool isRightSide)
+    {
+        isMovingRight = !isRightSide;
+    }
 }

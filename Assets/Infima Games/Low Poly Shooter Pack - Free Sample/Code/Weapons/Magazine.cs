@@ -11,16 +11,10 @@ namespace InfimaGames.LowPolyShooterPack
     {
         #region FIELDS SERIALIZED
 
-        [Header("Settings")]
-        
-        [Tooltip("Total Ammunition.")]
-        [SerializeField]
+        [Header("Settings")] [Tooltip("Total Ammunition.")] [SerializeField]
         private int ammunitionTotal = 10;
 
-        [Header("Interface")]
-
-        [Tooltip("Interface Sprite.")]
-        [SerializeField]
+        [Header("Interface")] [Tooltip("Interface Sprite.")] [SerializeField]
         private Sprite sprite;
 
         #endregion
@@ -31,6 +25,7 @@ namespace InfimaGames.LowPolyShooterPack
         /// Ammunition Total.
         /// </summary>
         public override int GetAmmunitionTotal() => ammunitionTotal;
+
         /// <summary>
         /// Sprite.
         /// </summary>

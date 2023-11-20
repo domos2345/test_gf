@@ -3,6 +3,7 @@
 using System;
 using UnityEngine;
 using System.Collections;
+using Infima_Games.Low_Poly_Shooter_Pack___Free_Sample.Code.Upgrades;
 using UnityEngine.InputSystem;
 
 namespace InfimaGames.LowPolyShooterPack
@@ -79,6 +80,8 @@ namespace InfimaGames.LowPolyShooterPack
         /// Character Kinematics. Handles all the IK stuff.
         /// </summary>
         private CharacterKinematics characterKinematics;
+
+        private PlayerUpgrades playerUpgrades;
 
         /// <summary>
         /// The currently equipped weapon.
@@ -165,6 +168,8 @@ namespace InfimaGames.LowPolyShooterPack
         /// </summary>
         private static readonly int HashMovement = Animator.StringToHash("Movement");
 
+        private static readonly int ReloadSpeed = Animator.StringToHash("Reload Speed Multiplier");
+
         #endregion
 
         #region UNITY
@@ -182,6 +187,8 @@ namespace InfimaGames.LowPolyShooterPack
 
             //Cache the CharacterKinematics component.
             characterKinematics = GetComponent<CharacterKinematics>();
+
+            playerUpgrades = GetComponent<PlayerUpgrades>();
 
             //Initialize Inventory.
             inventory.Init();
@@ -330,6 +337,11 @@ namespace InfimaGames.LowPolyShooterPack
 
             //Get the name of the animation state to play, which depends on weapon settings, and ammunition!
             string stateName = equippedWeapon.HasAmmunition() ? "Reload" : "Reload Empty";
+
+            // set speed of animation reload according to upgrade bonus
+            float speedMultiplier = 1 + playerUpgrades.GetCurrentBonusValueOfUpgrade(UpgradeType.RELOAD_SPEED);
+            characterAnimator.SetFloat(ReloadSpeed, speedMultiplier);
+
             //Play the animation state!
             characterAnimator.Play(stateName, layerActions, 0.0f);
 
@@ -393,7 +405,6 @@ namespace InfimaGames.LowPolyShooterPack
         private void FireEmpty()
         {
             lastFiredEmptyTime = Time.time;
-            print("fire empty");
             /*
              * Save Time. Even though we're not actually firing, we still need this for the fire rate between
              * empty shots.
@@ -592,6 +603,7 @@ namespace InfimaGames.LowPolyShooterPack
                 case {phase: InputActionPhase.Started}:
                     //Hold.
                     holdingButtonFire = true;
+                    // if there is no ammo try to reload after click if possible
                     if (!equippedWeapon.HasAmmunition() && CanPlayAnimationReload())
                     {
                         PlayReloadAnimation();
@@ -616,8 +628,6 @@ namespace InfimaGames.LowPolyShooterPack
                         {
                             Fire();
                         }
-
-                        break;
                     }
 
                     break;

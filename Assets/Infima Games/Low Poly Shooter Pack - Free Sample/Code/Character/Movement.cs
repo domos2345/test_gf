@@ -1,6 +1,7 @@
 ﻿// Copyright 2021, Infima Games. All Rights Reserved.
 
 using System.Linq;
+using Infima_Games.Low_Poly_Shooter_Pack___Free_Sample.Code.Upgrades;
 using UnityEngine;
 
 namespace InfimaGames.LowPolyShooterPack
@@ -10,20 +11,13 @@ namespace InfimaGames.LowPolyShooterPack
     {
         #region FIELDS SERIALIZED
 
-        [Header("Audio Clips")]
-        
-        [Tooltip("The audio clip that is played while walking.")]
-        [SerializeField]
+        [Header("Audio Clips")] [Tooltip("The audio clip that is played while walking.")] [SerializeField]
         private AudioClip audioClipWalking;
 
-        [Tooltip("The audio clip that is played while running.")]
-        [SerializeField]
+        [Tooltip("The audio clip that is played while running.")] [SerializeField]
         private AudioClip audioClipRunning;
 
-        [Header("Speeds")]
-
-        [SerializeField]
-        private float speedWalking = 5.0f;
+        [Header("Speeds")] [SerializeField] private float speedWalking = 5.0f;
 
         [Tooltip("How fast the player moves while running."), SerializeField]
         private float speedRunning = 9.0f;
@@ -49,15 +43,17 @@ namespace InfimaGames.LowPolyShooterPack
         /// Attached Rigidbody.
         /// </summary>
         private Rigidbody rigidBody;
+
         /// <summary>
         /// Attached CapsuleCollider.
         /// </summary>
         private CapsuleCollider capsule;
+
         /// <summary>
         /// Attached AudioSource.
         /// </summary>
         private AudioSource audioSource;
-        
+
         /// <summary>
         /// True if the character is currently grounded.
         /// </summary>
@@ -67,11 +63,14 @@ namespace InfimaGames.LowPolyShooterPack
         /// Player Character.
         /// </summary>
         private CharacterBehaviour playerCharacter;
+
         /// <summary>
         /// The player character's equipped weapon.
         /// </summary>
         private WeaponBehaviour equippedWeapon;
-        
+
+        private PlayerUpgrades playerUpgrades;
+
         /// <summary>
         /// Array of RaycastHits used for ground checking.
         /// </summary>
@@ -91,13 +90,16 @@ namespace InfimaGames.LowPolyShooterPack
         }
 
         /// Initializes the FpsController on start.
-        protected override  void Start()
+        protected override void Start()
         {
             //Rigidbody Setup.
             rigidBody = GetComponent<Rigidbody>();
             rigidBody.constraints = RigidbodyConstraints.FreezeRotation;
             //Cache the CapsuleCollider.
             capsule = GetComponent<CapsuleCollider>();
+
+            //Player upgrades setup
+            playerUpgrades = GetComponent<PlayerUpgrades>();
 
             //Audio Source Setup.
             audioSource = GetComponent<AudioSource>();
@@ -114,15 +116,15 @@ namespace InfimaGames.LowPolyShooterPack
             Vector3 extents = bounds.extents;
             //Radius.
             float radius = extents.x - 0.01f;
-            
+
             //Cast. This checks whether there is indeed ground, or not.
             Physics.SphereCastNonAlloc(bounds.center, radius, Vector3.down,
                 groundHits, extents.y - radius * 0.5f, ~0, QueryTriggerInteraction.Ignore);
-            
+
             //We can ignore the rest if we don't have any proper hits.
-            if (!groundHits.Any(hit => hit.collider != null && hit.collider != capsule)) 
+            if (!groundHits.Any(hit => hit.collider != null && hit.collider != capsule))
                 return;
-            
+
             //Store RaycastHits.
             for (var i = 0; i < groundHits.Length; i++)
                 groundHits[i] = new RaycastHit();
@@ -130,22 +132,22 @@ namespace InfimaGames.LowPolyShooterPack
             //Set grounded. Now we know for sure that we're grounded.
             grounded = true;
         }
-			
+
         protected override void FixedUpdate()
         {
             //Move.
             MoveCharacter();
-            
+
             //Unground.
             grounded = false;
         }
 
         /// Moves the camera to the character, processes jumping and plays sounds every frame.
-        protected override  void Update()
+        protected override void Update()
         {
             //Get the equipped weapon!
             equippedWeapon = playerCharacter.GetInventory().GetEquipped();
-            
+
             //Play Sounds!
             PlayFootstepSounds();
         }
@@ -162,10 +164,14 @@ namespace InfimaGames.LowPolyShooterPack
             Vector2 frameInput = playerCharacter.GetInputMovement();
             //Calculate local-space direction by using the player's input.
             var movement = new Vector3(frameInput.x, 0.0f, frameInput.y);
-            
+
             //Running speed calculation.
-            if(playerCharacter.IsRunning())
-                movement *= speedRunning;
+            if (playerCharacter.IsRunning())
+            {
+                // sprint speed + bonus from upgrades
+                movement *= speedRunning + speedRunning *
+                    playerUpgrades.GetUpgradeOfType(UpgradeType.SPRINT_SPEED).currentValue / 100;
+            }
             else
             {
                 //Multiply by the normal walking speed.
@@ -176,7 +182,7 @@ namespace InfimaGames.LowPolyShooterPack
             movement = transform.TransformDirection(movement);
 
             #endregion
-            
+
             //Update Velocity.
             Velocity = new Vector3(movement.x, 0.0f, movement.z);
         }

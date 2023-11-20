@@ -1,6 +1,7 @@
 ﻿using System;
 using UnityEngine;
 using System.Collections;
+using Infima_Games.Low_Poly_Shooter_Pack___Free_Sample.Code.Upgrades;
 using Random = UnityEngine.Random;
 
 public class TargetScript : MonoBehaviour
@@ -41,11 +42,16 @@ public class TargetScript : MonoBehaviour
     private Transform _transform;
     private System.Random randomGenerator = new System.Random();
 
+    // loot drop
+    private UpgradeOrbHolder upgradeOrbHolder;
+
 
     private void Awake()
     {
         _transform = GetComponent<Transform>();
+        upgradeOrbHolder = FindObjectOfType<UpgradeOrbHolder>();
     }
+
 
     private void Update()
     {
@@ -53,13 +59,14 @@ public class TargetScript : MonoBehaviour
         randomTime = Random.Range(minTime, maxTime);
 
         //If the target is hit
-        if (isHit == true)
+        if (isHit)
         {
             if (routineStarted == false)
             {
                 //Animate the target "down"
                 gameObject.GetComponent<Animation>().clip = targetDown;
                 gameObject.GetComponent<Animation>().Play();
+                upgradeOrbHolder.DropRandomOrb(_transform.position);
 
                 //Set the downSound as current sound, and play it
                 audioSource.GetComponent<AudioSource>().clip = downSound;

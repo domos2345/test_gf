@@ -1,5 +1,6 @@
 ﻿// Copyright 2021, Infima Games. All Rights Reserved.
 
+using Infima_Games.Low_Poly_Shooter_Pack___Free_Sample.Code.Upgrades;
 using UnityEngine;
 
 namespace InfimaGames.LowPolyShooterPack
@@ -10,75 +11,58 @@ namespace InfimaGames.LowPolyShooterPack
     public class Weapon : WeaponBehaviour
     {
         #region FIELDS SERIALIZED
-        
-        [Header("Firing")]
 
+        [Header("Firing")]
         [Tooltip("Is this weapon automatic? If yes, then holding down the firing button will continuously fire.")]
-        [SerializeField] 
-        private bool automatic;
-        
-        [Tooltip("How fast the projectiles are.")]
         [SerializeField]
+        private bool automatic;
+
+        [Tooltip("How fast the projectiles are.")] [SerializeField]
         private float projectileImpulse = 400.0f;
 
         [Tooltip("Amount of shots this weapon can shoot in a minute. It determines how fast the weapon shoots.")]
-        [SerializeField] 
+        [SerializeField]
         private int roundsPerMinutes = 200;
 
-        [Tooltip("Mask of things recognized when firing.")]
-        [SerializeField]
+        [Tooltip("Mask of things recognized when firing.")] [SerializeField]
         private LayerMask mask;
 
-        [Tooltip("Maximum distance at which this weapon can fire accurately. Shots beyond this distance will not use linetracing for accuracy.")]
+        [Tooltip(
+            "Maximum distance at which this weapon can fire accurately. Shots beyond this distance will not use linetracing for accuracy.")]
         [SerializeField]
         private float maximumDistance = 500.0f;
 
         [Header("Animation")]
-
-        [Tooltip("Transform that represents the weapon's ejection port, meaning the part of the weapon that casings shoot from.")]
+        [Tooltip(
+            "Transform that represents the weapon's ejection port, meaning the part of the weapon that casings shoot from.")]
         [SerializeField]
         private Transform socketEjection;
 
-        [Header("Resources")]
-
-        [Tooltip("Casing Prefab.")]
-        [SerializeField]
+        [Header("Resources")] [Tooltip("Casing Prefab.")] [SerializeField]
         private GameObject prefabCasing;
-        
-        [Tooltip("Projectile Prefab. This is the prefab spawned when the weapon shoots.")]
-        [SerializeField]
+
+        [Tooltip("Projectile Prefab. This is the prefab spawned when the weapon shoots.")] [SerializeField]
         private GameObject prefabProjectile;
-        
-        [Tooltip("The AnimatorController a player character needs to use while wielding this weapon.")]
-        [SerializeField] 
+
+        [Tooltip("The AnimatorController a player character needs to use while wielding this weapon.")] [SerializeField]
         public RuntimeAnimatorController controller;
 
-        [Tooltip("Weapon Body Texture.")]
-        [SerializeField]
+        [Tooltip("Weapon Body Texture.")] [SerializeField]
         private Sprite spriteBody;
-        
-        [Header("Audio Clips Holster")]
 
-        [Tooltip("Holster Audio Clip.")]
-        [SerializeField]
+        [Header("Audio Clips Holster")] [Tooltip("Holster Audio Clip.")] [SerializeField]
         private AudioClip audioClipHolster;
 
-        [Tooltip("Unholster Audio Clip.")]
-        [SerializeField]
+        [Tooltip("Unholster Audio Clip.")] [SerializeField]
         private AudioClip audioClipUnholster;
-        
-        [Header("Audio Clips Reloads")]
 
-        [Tooltip("Reload Audio Clip.")]
-        [SerializeField]
+        [Header("Audio Clips Reloads")] [Tooltip("Reload Audio Clip.")] [SerializeField]
         private AudioClip audioClipReload;
-        
-        [Tooltip("Reload Empty Audio Clip.")]
-        [SerializeField]
-        private AudioClip audioClipReloadEmpty;
-        
-        [Header("Audio Clips Other")]
 
+        [Tooltip("Reload Empty Audio Clip.")] [SerializeField]
+        private AudioClip audioClipReloadEmpty;
+
+        [Header("Audio Clips Other")]
         [Tooltip("AudioClip played when this weapon is fired without any ammunition.")]
         [SerializeField]
         private AudioClip audioClipFireEmpty;
@@ -91,6 +75,7 @@ namespace InfimaGames.LowPolyShooterPack
         /// Weapon Animator.
         /// </summary>
         private Animator animator;
+
         /// <summary>
         /// Attachment Manager.
         /// </summary>
@@ -102,11 +87,12 @@ namespace InfimaGames.LowPolyShooterPack
         private int ammunitionCurrent;
 
         #region Attachment Behaviours
-        
+
         /// <summary>
         /// Equipped Magazine Reference.
         /// </summary>
         private MagazineBehaviour magazineBehaviour;
+
         /// <summary>
         /// Equipped Muzzle Reference.
         /// </summary>
@@ -118,6 +104,7 @@ namespace InfimaGames.LowPolyShooterPack
         /// The GameModeService used in this game!
         /// </summary>
         private IGameModeService gameModeService;
+
         /// <summary>
         /// The main player character behaviour component.
         /// </summary>
@@ -127,11 +114,14 @@ namespace InfimaGames.LowPolyShooterPack
         /// The player character's camera.
         /// </summary>
         private Transform playerCamera;
-        
+
+        private PlayerUpgrades playerUpgrades;
+        private static readonly int ReloadSpeed = Animator.StringToHash("reload_speed");
+
         #endregion
 
         #region UNITY
-        
+
         protected override void Awake()
         {
             //Get Animator.
@@ -146,10 +136,13 @@ namespace InfimaGames.LowPolyShooterPack
             //Cache the world camera. We use this in line traces.
             playerCamera = characterBehaviour.GetCameraWorld().transform;
         }
+
+
         protected override void Start()
         {
             #region Cache Attachment References
-            
+
+            GetPlayerUpgrades();
             //Get Magazine.
             magazineBehaviour = attachmentManager.GetEquippedMagazine();
             //Get Muzzle.
@@ -166,7 +159,7 @@ namespace InfimaGames.LowPolyShooterPack
         #region GETTERS
 
         public override Animator GetAnimator() => animator;
-        
+
         public override Sprite GetSpriteBody() => spriteBody;
 
         public override AudioClip GetAudioClipHolster() => audioClipHolster;
@@ -176,17 +169,44 @@ namespace InfimaGames.LowPolyShooterPack
         public override AudioClip GetAudioClipReloadEmpty() => audioClipReloadEmpty;
 
         public override AudioClip GetAudioClipFireEmpty() => audioClipFireEmpty;
-        
+
         public override AudioClip GetAudioClipFire() => muzzleBehaviour.GetAudioClipFire();
-        
+
         public override int GetAmmunitionCurrent() => ammunitionCurrent;
 
-        public override int GetAmmunitionTotal() => magazineBehaviour.GetAmmunitionTotal();
+        public override int GetAmmunitionTotal()
+        {
+            return magazineBehaviour.GetAmmunitionTotal() + GetBonusFromUpgrades();
+        }
+
+        private int GetBonusFromUpgrades()
+        {
+            return (int) (magazineBehaviour.GetAmmunitionTotal() *
+                          playerUpgrades.GetCurrentBonusValueOfUpgrade(UpgradeType.AMMO_CAPACITY_BONUS));
+        }
+
+        private void GetPlayerUpgrades()
+        {
+            playerUpgrades = GetComponent<PlayerUpgrades>();
+            Transform tr = transform;
+            while (tr != null)
+            {
+                if (playerUpgrades != null)
+                {
+                    break;
+                }
+
+                tr = tr.parent;
+                playerUpgrades = tr.GetComponent<PlayerUpgrades>();
+            }
+        }
 
         public override bool IsAutomatic() => automatic;
         public override float GetRateOfFire() => roundsPerMinutes;
-        
-        public override bool IsFull() => ammunitionCurrent == magazineBehaviour.GetAmmunitionTotal();
+
+        public override bool IsFull() =>
+            ammunitionCurrent == GetAmmunitionTotal();
+
         public override bool HasAmmunition() => ammunitionCurrent > 0;
 
         public override RuntimeAnimatorController GetAnimatorController() => controller;
@@ -199,55 +219,61 @@ namespace InfimaGames.LowPolyShooterPack
         public override void Reload()
         {
             //Play Reload Animation.
+            //animator.SetFloat(ReloadSpeed, 4f);
+            animator.speed = 2f;
             animator.Play(HasAmmunition() ? "Reload" : "Reload Empty", 0, 0.0f);
         }
+
         public override void Fire(float spreadMultiplier = 1.0f)
         {
             //We need a muzzle in order to fire this weapon!
             if (muzzleBehaviour == null)
                 return;
-            
+
             //Make sure that we have a camera cached, otherwise we don't really have the ability to perform traces.
             if (playerCamera == null)
                 return;
 
             //Get Muzzle Socket. This is the point we fire from.
             Transform muzzleSocket = muzzleBehaviour.GetSocket();
-            
+
             //Play the firing animation.
             const string stateName = "Fire";
             animator.Play(stateName, 0, 0.0f);
             //Reduce ammunition! We just shot, so we need to get rid of one!
-            ammunitionCurrent = Mathf.Clamp(ammunitionCurrent - 1, 0, magazineBehaviour.GetAmmunitionTotal());
+            ammunitionCurrent = Mathf.Clamp(ammunitionCurrent - 1, 0,
+                GetAmmunitionTotal());
 
             //Play all muzzle effects.
             muzzleBehaviour.Effect();
-            
+
             //Determine the rotation that we want to shoot our projectile in.
             Quaternion rotation = Quaternion.LookRotation(playerCamera.forward * 1000.0f - muzzleSocket.position);
-            
+
             //If there's something blocking, then we can aim directly at that thing, which will result in more accurate shooting.
             if (Physics.Raycast(new Ray(playerCamera.position, playerCamera.forward),
                 out RaycastHit hit, maximumDistance, mask))
                 rotation = Quaternion.LookRotation(hit.point - muzzleSocket.position);
-                
+
             //Spawn projectile from the projectile spawn point.
             GameObject projectile = Instantiate(prefabProjectile, muzzleSocket.position, rotation);
             //Add velocity to the projectile.
-            projectile.GetComponent<Rigidbody>().velocity = projectile.transform.forward * projectileImpulse;   
+            projectile.GetComponent<Rigidbody>().velocity = projectile.transform.forward * projectileImpulse;
         }
 
         public override void FillAmmunition(int amount)
         {
             //Update the value by a certain amount.
-            ammunitionCurrent = amount != 0 ? Mathf.Clamp(ammunitionCurrent + amount, 
-                0, GetAmmunitionTotal()) : magazineBehaviour.GetAmmunitionTotal();
+            ammunitionCurrent = amount != 0
+                ? Mathf.Clamp(ammunitionCurrent + amount,
+                    0, GetAmmunitionTotal())
+                : GetAmmunitionTotal();
         }
 
         public override void EjectCasing()
         {
             //Spawn casing prefab at spawn point.
-            if(prefabCasing != null && socketEjection != null)
+            if (prefabCasing != null && socketEjection != null)
                 Instantiate(prefabCasing, socketEjection.position, socketEjection.rotation);
         }
 
